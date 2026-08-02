@@ -76,6 +76,11 @@ async function inputContainer(file: string): Promise<"mp4" | "mkv" | "original">
   const format = output.split("\n").map(line => line.trim()).find(line => /^(mov|mp4|m4a|3gp|3g2|mj2|matroska|webm)(,|$)/.test(line)) ?? ""
   return /(^|,)matroska|(^|,)webm/.test(format) ? "mkv" : /(^|,)(mov|mp4|m4a|3gp|3g2|mj2)(,|$)/.test(format) ? "mp4" : "original"
 }
+async function primaryVideoCodec(file: string): Promise<string> {
+  const output = await shell(`ffprobe -select_streams v:0 -show_entries stream=codec_name -of default=nw=1:nk=1 ${shellQuote(file)}`, 60)
+  return output.split("\n").map(line => line.trim().toLowerCase()).find(Boolean) ?? ""
+}
+function isApplePlaybackCompatibleVideo(codec: string): boolean { return codec === "h264" || codec === "hevc" }
 function extension(_probeResult: Probe): "mp4" | "mkv" | "original" { return "original" }
 async function verify(file: string, expected: "video" | "audio" | "av"): Promise<Probe> { const p = await probe(file); const c = counts(p); if ((expected === "video" && c.video < 1) || (expected === "audio" && c.audio < 1) || (expected === "av" && (c.video < 1 || c.audio < 1))) throw new Error("Final media does not contain expected streams"); return p }
 
@@ -93,9 +98,9 @@ async function finalize(item: AcquiredItem, policy: ReturnType<typeof normalizeI
       return { jobId: item.jobId, title: item.title, state: "completed", kind: "audio", container: "original", mediaPath: final, rawFilesRetained: policy.keepRawFiles, finalizationMethod: "preserved-original" }
     }
     if (item.kind === "progressive") {
-      const source = item.inputs.mediaPath!; await verify(source, "av"); const sourceContainer = await inputContainer(source)
-      if (policy.container === "mp4" && sourceContainer !== "mp4") {
-        await shell(`ffmpeg -nostdin -hide_banner -loglevel error -n -i ${shellQuote(source)} -map 0:v:0 -map 0:a:0 -c:v h264_videotoolbox -b:v 8M -c:a aac -b:a 192k -movflags +faststart ${shellQuote(stageMp4)}`, 900)
+      const source = item.inputs.mediaPath!; await verify(source, "av"); const sourceContainer = await inputContainer(source); const videoCodec = await primaryVideoCodec(source)
+      if (policy.container === "mp4" && (sourceContainer !== "mp4" || !isApplePlaybackCompatibleVideo(videoCodec))) {
+        await shell(`ffmpeg -nostdin -hide_banner -loglevel error -i ${shellQuote(source)} -map 0:v:0 -map 0:a:0 -c:v h264_videotoolbox -b:v 8M -c:a aac -b:a 192k -movflags +faststart ${shellQuote(stageMp4)}`, 900)
         await verify(stageMp4, "av"); await promote(stageMp4, pathJoin(item.resultDir, "media.mp4"), item.rawDir, policy.keepRawFiles)
         return { jobId: item.jobId, title: item.title, state: "completed", kind: "video", container: "mp4", mediaPath: pathJoin(item.resultDir, "media.mp4"), rawFilesRetained: policy.keepRawFiles, finalizationMethod: "transcode-mp4" }
       }
@@ -109,7 +114,7 @@ async function finalize(item: AcquiredItem, policy: ReturnType<typeof normalizeI
       await clearIfExists(stage)
       const codec = transcode ? "-c:v h264_videotoolbox -b:v 8M -c:a aac -b:a 192k" : "-c copy"
       const fastStart = target === "mp4" ? " -movflags +faststart" : ""
-      await shell(`ffmpeg -nostdin -hide_banner -loglevel error -n -i ${shellQuote(video)} -i ${shellQuote(audio)} -map 0:v:0 -map 1:a:0 ${codec}${fastStart} ${shellQuote(stage)}`, 900)
+      await shell(`ffmpeg -nostdin -hide_banner -loglevel error -i ${shellQuote(video)} -i ${shellQuote(audio)} -map 0:v:0 -map 1:a:0 ${codec}${fastStart} ${shellQuote(stage)}`, 900)
       await verify(stage, "av")
     }
     if (policy.container === "original") return { jobId: item.jobId, title: item.title, state: "completed", kind: "tracks", container: "original", videoPath: video, audioPath: audio, rawFilesRetained: true, finalizationMethod: "preserved-tracks" }

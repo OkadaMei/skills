@@ -1,7 +1,18 @@
-import { Text, VStack, VideoPlayer, useEffect, useMemo } from "scripting"
+import {
+  Button,
+  HStack,
+  Image,
+  Spacer,
+  Text,
+  VStack,
+  VideoPlayer,
+  useEffect,
+  useMemo,
+  useState,
+} from "scripting"
 
 export type DownloadedVideoViewProps = {
-  /** Absolute local path returned by the X video downloader. */
+  /** Absolute local path returned by the media downloader. */
   videoPath: string
   /** Optional title returned by yt-dlp. */
   title?: string
@@ -15,6 +26,8 @@ export default function DownloadedVideoView({
   videoPath,
   title,
 }: DownloadedVideoViewProps) {
+  const [isSharing, setIsSharing] = useState(false)
+
   const player = useMemo(() => {
     const instance = new AVPlayer()
     instance.setSource(videoPath)
@@ -30,10 +43,56 @@ export default function DownloadedVideoView({
     }
   }, [player])
 
+  const shareVideo = async () => {
+    if (isSharing) return
+    setIsSharing(true)
+    try {
+      await ShareSheet.present([videoPath])
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
   return (
-    <VStack spacing={8} padding={12}>
-      {title ? <Text font="headline">{title}</Text> : null}
-      <VideoPlayer player={player} frame={{ height: 360 }} />
+    <VStack
+      spacing={12}
+      padding={12}
+      background="secondarySystemBackground"
+      clipShape={{ type: "rect", cornerRadius: 16 }}
+    >
+      <HStack spacing={9} alignment="center">
+        <Image
+          systemName="play.rectangle.fill"
+          font="title3"
+          foregroundStyle="systemBlue"
+        />
+        <VStack spacing={2} alignment="leading">
+          <Text font="headline" lineLimit={2}>
+            {title || "已下载的视频"}
+          </Text>
+          <Text font="caption" foregroundStyle="secondaryLabel">
+            视频已保存，可播放或分享
+          </Text>
+        </VStack>
+        <Spacer />
+      </HStack>
+
+      <VideoPlayer
+        player={player}
+        frame={{ height: 360 }}
+        clipShape={{ type: "rect", cornerRadius: 12 }}
+      />
+
+      <Button
+        title={isSharing ? "正在打开分享…" : "分享视频"}
+        systemImage="square.and.arrow.up"
+        action={() => void shareVideo()}
+        disabled={isSharing}
+        buttonStyle="bordered"
+        controlSize="large"
+        frame={{ maxWidth: Infinity }}
+        buttonBorderShape="roundedRectangle"
+      />
     </VStack>
   )
 }

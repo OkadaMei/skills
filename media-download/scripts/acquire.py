@@ -45,11 +45,16 @@ def choose(formats: list[dict[str, Any]], quality: str) -> dict[str, Any] | None
         height = f.get("height")
         return max_height is None or not isinstance(height, int) or height <= max_height
     progressive = [f for f in formats if f.get("vcodec") not in (None, "none") and f.get("acodec") not in (None, "none") and ok_height(f)]
-    progressive.sort(key=lambda f: (f.get("ext") == "mp4", f.get("height") or 0, f.get("tbr") or 0), reverse=True)
+    # Some extractors (notably Instagram) expose progressive MP4 variants without
+    # codec metadata. Prefer the last such variant (normally the highest quality)
+    # and let ffprobe verify that it really contains both video and audio.
+    opaque_progressive = [f for f in formats if f.get("ext") == "mp4" and f.get("vcodec") is None and f.get("acodec") is None and ok_height(f)]
+    progressive.sort(key=lambda f: (str(f.get("vcodec") or "").lower().startswith(("avc1", "h264")), f.get("ext") == "mp4", f.get("height") or 0, f.get("tbr") or 0), reverse=True)
     if progressive: return {"kind": "progressive", "media": progressive[0]}
+    if opaque_progressive: return {"kind": "progressive", "media": opaque_progressive[-1]}
     videos = [f for f in formats if f.get("vcodec") not in (None, "none") and f.get("acodec") in (None, "none") and ok_height(f)]
     audios = [f for f in formats if f.get("acodec") not in (None, "none") and f.get("vcodec") in (None, "none")]
-    videos.sort(key=lambda f: (f.get("height") or 0, f.get("tbr") or 0), reverse=True)
+    videos.sort(key=lambda f: (str(f.get("vcodec") or "").lower().startswith(("avc1", "h264")), f.get("height") or 0, f.get("tbr") or 0), reverse=True)
     audios.sort(key=lambda f: (f.get("ext") in {"m4a", "aac"}, f.get("abr") or f.get("tbr") or 0), reverse=True)
     if videos and audios: return {"kind": "adaptive", "video": videos[0], "audio": audios[0]}
     if audios: return {"kind": "audio_only", "audio": audios[0]}
