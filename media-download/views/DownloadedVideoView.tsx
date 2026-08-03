@@ -27,6 +27,8 @@ export default function DownloadedVideoView({
   title,
 }: DownloadedVideoViewProps) {
   const [isSharing, setIsSharing] = useState(false)
+  const isChinese = Device.systemLocale.toLowerCase().startsWith("zh")
+  const fallbackTitle = isChinese ? "已下载的视频" : "Downloaded video"
 
   const player = useMemo(() => {
     const instance = new AVPlayer()
@@ -54,44 +56,33 @@ export default function DownloadedVideoView({
   }
 
   return (
-    <VStack
-      spacing={12}
-      padding={12}
-      background="secondarySystemBackground"
-      clipShape={{ type: "rect", cornerRadius: 16 }}
-    >
-      <HStack spacing={9} alignment="center">
-        <Image
-          systemName="play.rectangle.fill"
-          font="title3"
-          foregroundStyle="systemBlue"
-        />
-        <VStack spacing={2} alignment="leading">
-          <Text font="headline" lineLimit={2}>
-            {title || "已下载的视频"}
-          </Text>
-          <Text font="caption" foregroundStyle="secondaryLabel">
-            视频已保存，可播放或分享
-          </Text>
-        </VStack>
+    <VStack spacing={9} padding={{ vertical: 4 }}>
+      <HStack spacing={10} alignment="center">
+        <Text
+          font="subheadline"
+          fontWeight="semibold"
+          lineLimit={2}
+          foregroundStyle="label"
+        >
+          {title || fallbackTitle}
+        </Text>
         <Spacer />
+        <Button
+          action={() => void shareVideo()}
+          disabled={isSharing}
+          buttonStyle="bordered"
+          controlSize="small"
+          buttonBorderShape="circle"
+          accessibilityLabel={isChinese ? "分享视频" : "Share video"}
+        >
+          <Image systemName="square.and.arrow.up" />
+        </Button>
       </HStack>
 
       <VideoPlayer
         player={player}
-        frame={{ height: 360 }}
+        frame={{ height: 340 }}
         clipShape={{ type: "rect", cornerRadius: 12 }}
-      />
-
-      <Button
-        title={isSharing ? "正在打开分享…" : "分享视频"}
-        systemImage="square.and.arrow.up"
-        action={() => void shareVideo()}
-        disabled={isSharing}
-        buttonStyle="bordered"
-        controlSize="large"
-        frame={{ maxWidth: Infinity }}
-        buttonBorderShape="roundedRectangle"
       />
     </VStack>
   )
