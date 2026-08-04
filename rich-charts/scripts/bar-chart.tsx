@@ -1,6 +1,6 @@
 import { BarChart, Chart, VStack, Text } from "scripting"
 import { ChartTitle, SeriesLegend } from "./chart-ui"
-import { BarChartProps, chartStyle, seriesColor } from "./types"
+import { BarChartProps, categoryLabels, chartStyle, horizontalCategoryViewport, seriesColor } from "./types"
 
 /** Category bar chart. Multi-series bars are grouped along the category axis. */
 export function BarChartView({
@@ -11,7 +11,10 @@ export function BarChartView({
   labelOnYAxis = false,
   color,
   cornerRadius = 4,
+  scrollable = "auto",
+  visibleCategoryCount,
 }: BarChartProps) {
+  const viewport = horizontalCategoryViewport(categoryLabels(data, series), labelOnYAxis, scrollable, visibleCategoryCount)
   const nonEmptySeries = series?.filter(item => item.data.length > 0) ?? []
 
   if (nonEmptySeries.length > 0) {
@@ -25,7 +28,7 @@ export function BarChartView({
     return (
       <VStack spacing={8}>
         <ChartTitle title={title} />
-        <Chart frame={{ height }}>
+        <Chart frame={{ height }} {...viewport}>
           {nonEmptySeries.map((item, index) => {
             const key = `series-${index}`
             return (
@@ -54,7 +57,7 @@ export function BarChartView({
     return (
       <VStack spacing={8}>
         <ChartTitle title={title} />
-        <Chart frame={{ height }}>
+        <Chart frame={{ height }} {...viewport}>
           <BarChart
             labelOnYAxis={labelOnYAxis}
             marks={data.map(point => ({

@@ -75,6 +75,12 @@ function normalizeConfig(input: unknown): { config?: ChartConfig; error?: string
     default: return { error: `不支持的图表类型: ${config.type}` }
   }
   if (error) return { error }
+  if (isRecord(config.options)) {
+    const scrollable = config.options.scrollable
+    const visibleCount = config.options.visibleCategoryCount
+    if (scrollable !== undefined && scrollable !== true && scrollable !== false && scrollable !== "auto") return { error: "options.scrollable 必须是 true、false 或 auto" }
+    if (visibleCount !== undefined && (typeof visibleCount !== "number" || !Number.isFinite(visibleCount) || visibleCount < 1)) return { error: "options.visibleCategoryCount 必须是大于等于 1 的有限数字" }
+  }
   if (config.type === "donut" && isRecord(config.options)) {
     const inner = config.options.innerRadius
     const outer = config.options.outerRadius
@@ -87,11 +93,11 @@ function normalizeConfig(input: unknown): { config?: ChartConfig; error?: string
 
 function ChartRendererInner({ config, height = 300 }: ChartRendererProps) {
   switch (config.type) {
-    case "bar": return <BarChartView title={config.title} height={height} data={config.data} series={config.series} labelOnYAxis={config.options?.labelOnYAxis} color={config.options?.color} cornerRadius={config.options?.cornerRadius} />
+    case "bar": return <BarChartView title={config.title} height={height} data={config.data} series={config.series} labelOnYAxis={config.options?.labelOnYAxis} color={config.options?.color} cornerRadius={config.options?.cornerRadius} scrollable={config.options?.scrollable} visibleCategoryCount={config.options?.visibleCategoryCount} />
     case "bar1d": return <Bar1DChartView title={config.title} height={height} data={config.data} labelOnYAxis={config.options?.labelOnYAxis} colors={config.options?.colors} />
-    case "line": return <LineChartView title={config.title} height={height} data={config.data} series={config.series} labelOnYAxis={config.options?.labelOnYAxis} interpolationMethod={config.options?.interpolationMethod} showSymbols={config.options?.showSymbols} symbol={config.options?.symbol} />
-    case "area": return <AreaChartView title={config.title} height={height} data={config.data} series={config.series} labelOnYAxis={config.options?.labelOnYAxis} interpolationMethod={config.options?.interpolationMethod} />
-    case "areaStack": return <AreaStackChartView title={config.title} height={height} data={config.data} labelOnYAxis={config.options?.labelOnYAxis} stacking={config.options?.stacking} colors={config.options?.colors} />
+    case "line": return <LineChartView title={config.title} height={height} data={config.data} series={config.series} labelOnYAxis={config.options?.labelOnYAxis} interpolationMethod={config.options?.interpolationMethod} showSymbols={config.options?.showSymbols} symbol={config.options?.symbol} scrollable={config.options?.scrollable} visibleCategoryCount={config.options?.visibleCategoryCount} />
+    case "area": return <AreaChartView title={config.title} height={height} data={config.data} series={config.series} labelOnYAxis={config.options?.labelOnYAxis} interpolationMethod={config.options?.interpolationMethod} scrollable={config.options?.scrollable} visibleCategoryCount={config.options?.visibleCategoryCount} />
+    case "areaStack": return <AreaStackChartView title={config.title} height={height} data={config.data} labelOnYAxis={config.options?.labelOnYAxis} stacking={config.options?.stacking} colors={config.options?.colors} scrollable={config.options?.scrollable} visibleCategoryCount={config.options?.visibleCategoryCount} />
     case "pie": return <PieChartView title={config.title} height={height} data={config.data} showPercentage={config.options?.showPercentage} colors={config.options?.colors} />
     case "donut": return <DonutChartView title={config.title} height={height} data={config.data} showPercentage={config.options?.showPercentage} colors={config.options?.colors} innerRadius={config.options?.innerRadius} outerRadius={config.options?.outerRadius} />
     case "point": return <PointChartView title={config.title} height={height} data={config.data} series={config.series} symbolSize={config.options?.symbolSize} symbol={config.options?.symbol} />

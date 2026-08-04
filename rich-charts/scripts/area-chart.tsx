@@ -1,6 +1,6 @@
 import { AreaChart, Chart, VStack, Text } from "scripting"
 import { ChartTitle, SeriesLegend } from "./chart-ui"
-import { AreaChartProps, chartStyle, seriesColor } from "./types"
+import { AreaChartProps, categoryLabels, chartStyle, horizontalCategoryViewport, seriesColor } from "./types"
 
 /** An overlay area chart. Multi-series marks are explicitly unstacked. */
 export function AreaChartView({
@@ -10,7 +10,10 @@ export function AreaChartView({
   series,
   labelOnYAxis = false,
   interpolationMethod = "catmullRom",
+  scrollable = "auto",
+  visibleCategoryCount,
 }: AreaChartProps) {
+  const viewport = horizontalCategoryViewport(categoryLabels(data, series), labelOnYAxis, scrollable, visibleCategoryCount)
   const nonEmptySeries = series?.filter(item => item.data.length > 0) ?? []
 
   if (nonEmptySeries.length > 0) {
@@ -23,7 +26,7 @@ export function AreaChartView({
     return (
       <VStack spacing={8}>
         <ChartTitle title={title} />
-        <Chart frame={{ height }}>
+        <Chart frame={{ height }} {...viewport}>
           {nonEmptySeries.map((item, index) => (
             <AreaChart
               key={`series-${index}`}
@@ -49,7 +52,7 @@ export function AreaChartView({
     return (
       <VStack spacing={8}>
         <ChartTitle title={title} />
-        <Chart frame={{ height }}>
+        <Chart frame={{ height }} {...viewport}>
           <AreaChart
             labelOnYAxis={labelOnYAxis}
             marks={data.map(point => ({

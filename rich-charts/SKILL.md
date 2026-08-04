@@ -56,7 +56,7 @@ Output a `scripting-file` block with the data:
     { "label": "类别1", "value": 100 },
     { "label": "类别2", "value": 200 }
   ],
-  "options": { "color": "#4A90D9" }
+  "options": { "color": "#4A90D9", "scrollable": "auto", "visibleCategoryCount": 10 }
 }
 ```
 
@@ -125,9 +125,13 @@ Output a `scripting-file` block with the data:
 
 # Notes
 
+- `options.scrollable`（bar/line/area/areaStack）：`"auto"`（默认）、`true` 或 `false`。自动模式在类别超过可视窗口时启用 Charts 原生横向滚动，避免手机上把几十个横轴类别挤在一起。
+- `options.visibleCategoryCount`：滚动时同时显示的类别数，必须 ≥ 1；默认根据最长标签自适应为 6、8 或 10。
+- 对 20–50 个时间点，优先使用 `line` 并保留滚动。若显式设置 `scrollable: false`，图表会压缩为全局概览，横轴标签可能被系统抽稀。
+- `labelOnYAxis: true` 暂不自动开启纵向图内滚动，以避免和页面纵向 ScrollView 的手势冲突。
 - Supports light/dark mode automatically
 - Colors accept Scripting `Color` formats: keyword, hex, rgb/rgba, or hsl/hsla.
 - `series.id` is optional but, when supplied, must be non-empty and unique. It is the stable internal grouping/color key; `name` is display-only and may repeat. Without an `id`, the renderer assigns a per-input-order key. Series colors are bound to those keys and accompanied by an explicit legend.
 - Multi-series `line` uses a single category-grouped renderer with a fixed series-key color scale, so every path is independent and its color matches the explicit legend. Multi-series `area` renders independent non-stacked overlays; `bar` renders grouped bars (and respects `labelOnYAxis`).
 - Empty datasets show `暂无数据`; invalid JSON config (including `data` + `series`, duplicated ids, or invalid donut radii) shows a configuration error.
-- For large datasets (50+ points), prefer line chart over bar chart
+- For large datasets (50+ points), prefer line chart over bar chart; dense category charts scroll horizontally by default rather than compressing every point into the device width.

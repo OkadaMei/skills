@@ -1,6 +1,6 @@
 import { Chart, LineCategoryChart, LineChart, VStack, Text } from "scripting"
 import { ChartTitle, SeriesLegend } from "./chart-ui"
-import { LineChartProps, chartStyle, seriesColor } from "./types"
+import { LineChartProps, categoryLabels, chartStyle, horizontalCategoryViewport, seriesColor } from "./types"
 
 /** A line chart. Multi-series marks are grouped by a stable internal key so paths and style-scale colors remain independent. */
 export function LineChartView({
@@ -12,7 +12,10 @@ export function LineChartView({
   interpolationMethod = "catmullRom",
   showSymbols = true,
   symbol = "circle",
+  scrollable = "auto",
+  visibleCategoryCount,
 }: LineChartProps) {
+  const viewport = horizontalCategoryViewport(categoryLabels(data, series), labelOnYAxis, scrollable, visibleCategoryCount)
   const nonEmptySeries = series?.filter(item => item.data.length > 0) ?? []
 
   if (nonEmptySeries.length > 0) {
@@ -42,7 +45,7 @@ export function LineChartView({
     return (
       <VStack spacing={8}>
         <ChartTitle title={title} />
-        <Chart frame={{ height }} chartLegend="hidden" chartForegroundStyleScale={chartForegroundStyleScale}>
+        <Chart frame={{ height }} chartLegend="hidden" chartForegroundStyleScale={chartForegroundStyleScale} {...viewport}>
           <LineCategoryChart labelOnYAxis={labelOnYAxis} marks={marks} />
         </Chart>
         <SeriesLegend items={legendItems} />
@@ -54,7 +57,7 @@ export function LineChartView({
     return (
       <VStack spacing={8}>
         <ChartTitle title={title} />
-        <Chart frame={{ height }}>
+        <Chart frame={{ height }} {...viewport}>
           <LineChart
             labelOnYAxis={labelOnYAxis}
             marks={data.map(point => ({
